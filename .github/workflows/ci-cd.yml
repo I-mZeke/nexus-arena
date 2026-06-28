@@ -3,31 +3,76 @@ name: NEXUS ARENA CI/CD
 on:
   push:
     branches: [main, develop]
+  pull_request:
+    branches: [main]
 
 jobs:
-  test-and-scan:
+  build-and-scan-backend:
+    name: Build y Scan Backend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout código
+        uses: actions/checkout@v4
 
-      - name: Build Backend Image
+      - name: Build imagen Docker backend
         run: docker build -t nexus-backend:${{ github.sha }} ./backend
 
-      - name: Scan with Trivy
+      - name: Scan vulnerabilidades con Trivy
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: nexus-backend:${{ github.sha }}
           format: table
           exit-code: '0'
+          severity: CRITICAL,HIGH
 
-      - name: Build Frontend Image
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias
+        run: |
+          cd frontend
+          npm install
+
+      - name: Build producción
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Build imagen Docker frontend
         run: docker build -t nexus-frontend:${{ github.sha }} ./frontend
 
-  deploy:
-    needs: test-and-scan
+  terraform-validate:
+    name: Validar Terraform
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
-      - name: Deploy confirmation
-        run: echo "✅ Pipeline completado - listo para deploy a ECS"
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.0
+
+      - name: Terraform Init
+        run: |
+          cd nexus-infra
+          terraform init -backend=false
+
+      - name: Terraform Validate
+        run: |
+          cd nexus-infra
+          terraform validate
+
+      - name: Terraform Format Check
+        run: |
+          cd nexus-infra
+          terraform fmt -check
