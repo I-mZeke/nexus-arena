@@ -1,0 +1,33 @@
+name: NEXUS ARENA CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+
+jobs:
+  test-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Backend Image
+        run: docker build -t nexus-backend:${{ github.sha }} ./backend
+
+      - name: Scan with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: nexus-backend:${{ github.sha }}
+          format: table
+          exit-code: '0'
+
+      - name: Build Frontend Image
+        run: docker build -t nexus-frontend:${{ github.sha }} ./frontend
+
+  deploy:
+    needs: test-and-scan
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy confirmation
+        run: echo "✅ Pipeline completado - listo para deploy a ECS"

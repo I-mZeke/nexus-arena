@@ -1,0 +1,18 @@
+# Python
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+
+# Node
+frontend/node_modules/
+
+# Terraform
+nexus-infra/.terraform/
+nexus-infra/*.tfstate
+nexus-infra/*.tfstate.backup
+nexus-infra/.terraform.lock.hcl
+nexus-infra/terraform.tfvars
+
+# Secrets
+.env
+*.env
